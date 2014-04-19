@@ -3,3 +3,6 @@ name: MOTD-Ping
 description: Recognize MOTD pings
 version: 0.1
 author: augustt198
+commands:
+  pingmsg:
+    description: Commands for ping messages

@@ -11,6 +11,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Created by August on 4/18/14.
@@ -24,6 +27,8 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 	MongoClient client;
 	DB database;
 	private DBCollection collection;
+	private boolean showRecognizedPingMessage;
+	private List<String> recognizedPingMessages = new ArrayList<>();
 
 	@Override
 	public void onEnable() {
@@ -87,7 +92,8 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 		collection = database.getCollection(collName);
 
 		getServer().getPluginManager().registerEvents(this, this);
-		getServer().getPluginManager().registerEvents(new Example(), this);
+
+		getCommand("pingmsg").setExecutor(new MOTDCommands(this));
 
 	}
 
@@ -107,6 +113,36 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 		BasicDBObject insert = remove.append("username", event.getPlayer().getName());
 		collection.remove(remove);
 		collection.insert(insert);
+	}
+
+	@EventHandler
+	public void onRecognizedPing(RecognizedPingEvent event) {
+		if(showRecognizedPingMessage) {
+			if(recognizedPingMessages.isEmpty()) return;
+			String msg = recognizedPingMessages.get(new Random().nextInt(recognizedPingMessages.size()));
+			String user = event.getUsername();
+			msg = msg.replace("{user}", user);
+			msg = msg.replace("{username}", user);
+			msg = msg.replace("{player}", user);
+			msg = msg.replace("{name}", user);
+			event.getPingEvent().setMotd(msg);
+		}
+	}
+
+	public boolean isShowingRecognizedPingMessage() {
+		return showRecognizedPingMessage;
+	}
+
+	public void setShowRecognizedPingMessage(boolean showRecognizedPingMessage) {
+		this.showRecognizedPingMessage = showRecognizedPingMessage;
+	}
+
+	public void addPingMessage(String msg) {
+		recognizedPingMessages.add(msg);
+	}
+
+	public void clearPingMessages() {
+		recognizedPingMessages.clear();
 	}
 
 	public static class MOTDPluginException extends Exception {
