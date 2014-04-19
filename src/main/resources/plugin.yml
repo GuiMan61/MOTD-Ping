@@ -1,0 +1,5 @@
+main: me.august.motd.MOTDPlugin
+name: MOTD-Ping
+description: Recognize MOTD pings
+version: 0.1
+author: augustt198
