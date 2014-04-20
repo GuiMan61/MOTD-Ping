@@ -1,15 +1,21 @@
 package me.august.motd;
 
 import com.mongodb.*;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.CachedServerIcon;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +35,10 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 	private DBCollection collection;
 	private boolean showRecognizedPingMessage;
 	private List<String> recognizedPingMessages = new ArrayList<>();
+	private boolean showAvatar;
+	private String avatarURL = "http://cravatar.eu/avatar/{username}/{size}.png";
+	private int avatarSize = 64;
+	private boolean avatarOverlay;
 
 	@Override
 	public void onEnable() {
@@ -95,6 +105,26 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 
 		getCommand("pingmsg").setExecutor(new MOTDCommands(this));
 
+		if(getConfig().get("messages") != null) {
+			recognizedPingMessages = getConfig().getStringList("messages");
+			getLogger().info("messages loaded from config:");
+			getLogger().info("" + recognizedPingMessages);
+		}
+
+		if(getConfig().get("default_toggle") != null) {
+			showRecognizedPingMessage = getConfig().getBoolean("default_toggle");
+			getLogger().info("toggle ping messages set to : " + showRecognizedPingMessage);
+		}
+
+		showAvatar = getConfig().getBoolean("avatar");
+		if(getConfig().get("avatar_size") != null) {
+			avatarSize = getConfig().getInt("avatar_size");
+		}
+		if(getConfig().get("avatar_url") != null) {
+			avatarURL = getConfig().getString("avatar_url");
+		}
+		avatarOverlay = getConfig().getBoolean("avatar_overlay");
+
 	}
 
 	@EventHandler
@@ -126,6 +156,26 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 			msg = msg.replace("{player}", user);
 			msg = msg.replace("{name}", user);
 			event.getPingEvent().setMotd(msg);
+			if(showAvatar) {
+				try {
+					String url = avatarURL;
+					url = url.replace("{user}", user);
+					url = url.replace("{username}", user);
+					url = url.replace("{player}", user);
+					url = url.replace("{name}", user);
+					url = url.replace("{size}", "" + avatarSize);
+					if(avatarOverlay) {
+						BufferedImage background = ImageIO.read(new File(getDataFolder(), "background.png"));
+						BufferedImage avatar = getAvatar(url);
+						CachedServerIcon icon = getServer().loadServerIcon(overlay(avatar, background));
+						event.getPingEvent().setServerIcon(icon);
+					} else {
+						BufferedImage avatar = getAvatar(url);
+						CachedServerIcon icon = getServer().loadServerIcon(avatar);
+						event.getPingEvent().setServerIcon(icon);
+					}
+				} catch(Exception ignored) {}
+			}
 		}
 	}
 
@@ -149,6 +199,35 @@ public class MOTDPlugin extends JavaPlugin implements Listener {
 		public MOTDPluginException(String message) {
 			super(message);
 		}
+	}
+
+
+	public static BufferedImage getAvatar(String urlString) throws IOException {
+		URL url = new URL(urlString);
+		return ImageIO.read(url);
+	}
+
+	public static BufferedImage resizeImage(BufferedImage originalImage, int width, int height, int type) {
+		BufferedImage resizedImage = new BufferedImage(width, height, type);
+		Graphics2D g = resizedImage.createGraphics();
+		g.drawImage(originalImage, 0, 0, width, height, null);
+		g.dispose();
+
+		return resizedImage;
+	}
+
+	public static int getType(BufferedImage image) {
+		return image.getType() == 0? BufferedImage.TYPE_INT_ARGB : image.getType();
+	}
+
+	public BufferedImage overlay(BufferedImage overlay, BufferedImage bg) throws Exception {
+		int w = Math.max(bg.getWidth(), overlay.getWidth());
+		int h = Math.max(bg.getHeight(), overlay.getHeight());
+		BufferedImage combined = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		Graphics g = combined.getGraphics();
+		g.drawImage(bg, 0, 0, null);
+		g.drawImage(overlay, 0, 0, null);
+		return combined;
 	}
 
 }
