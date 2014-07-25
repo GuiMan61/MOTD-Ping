@@ -27,7 +27,6 @@ public class Example implements Listener {
 		} catch(Exception e) {
 			e.getStackTrace();
 		}
-		event.getPingEvent().setMotd(ChatColor.GREEN + "Welcome, " + event.getUsername());
 	}
 
 
